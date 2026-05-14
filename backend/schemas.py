@@ -1,7 +1,6 @@
-from __future__ import annotations
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel
+from typing import Literal, Optional, Annotated
+from pydantic import BaseModel, Field, field_validator
 
 
 # Auth
@@ -17,9 +16,16 @@ class TokenResponse(BaseModel):
 
 # Extraction
 class ExtractionCreate(BaseModel):
-    type: str
+    type: Literal["empresas", "restaurantes", "passeio"]
     city: str
-    state: str
+    state: str  # sigla 2 letras, ex: MS
+
+    @field_validator("state")
+    @classmethod
+    def state_must_be_two_chars(cls, v: str) -> str:
+        if len(v) != 2:
+            raise ValueError("state deve ter 2 letras (ex: MS)")
+        return v.upper()
 
 
 class ExtractionResponse(BaseModel):
@@ -28,7 +34,7 @@ class ExtractionResponse(BaseModel):
     city: str
     state: str
     status: str
-    total_found: int
+    total_found: Annotated[int, Field(ge=0)]
     error_msg: Optional[str] = None
     created_at: datetime
     finished_at: Optional[datetime] = None
