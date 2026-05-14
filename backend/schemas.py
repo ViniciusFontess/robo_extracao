@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional, Annotated
+from typing import Optional, Annotated
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -16,7 +16,7 @@ class TokenResponse(BaseModel):
 
 # Extraction
 class ExtractionCreate(BaseModel):
-    type: Literal["empresas", "restaurantes", "passeio"]
+    type: Annotated[str, Field(min_length=2, max_length=100)]
     city: str
     state: str  # sigla 2 letras, ex: MS
     max_results: Annotated[int, Field(ge=0)] = 0  # 0 = sem limite
@@ -27,6 +27,11 @@ class ExtractionCreate(BaseModel):
         if len(v) != 2:
             raise ValueError("state deve ter 2 letras (ex: MS)")
         return v.upper()
+
+    @field_validator("type")
+    @classmethod
+    def type_strip(cls, v: str) -> str:
+        return v.strip()
 
 
 class ExtractionResponse(BaseModel):

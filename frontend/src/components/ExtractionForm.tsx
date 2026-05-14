@@ -30,10 +30,18 @@ const ESTADOS = [
   { uf: 'TO', nome: 'Tocantins' },
 ]
 
-const TIPOS = [
-  { value: 'empresas', label: '🏢 Empresas' },
-  { value: 'restaurantes', label: '🍽️ Restaurantes' },
-  { value: 'passeio', label: '🎡 Passeios' },
+const TIPO_SUGESTOES = [
+  'restaurante', 'lanchonete', 'padaria', 'pizzaria', 'churrascaria',
+  'farmácia', 'supermercado', 'mercado', 'açougue', 'hortifruti',
+  'academia', 'salão de beleza', 'barbearia', 'clínica', 'dentista',
+  'médico', 'veterinário', 'pet shop',
+  'advogado', 'contabilidade', 'imobiliária',
+  'hotel', 'pousada', 'motel',
+  'posto de combustível', 'oficina mecânica', 'loja de autopeças',
+  'escola', 'faculdade', 'curso',
+  'banco', 'lotérica',
+  'passeio', 'parque', 'museu', 'teatro',
+  'sorveteria', 'confeitaria', 'cafeteria',
 ]
 
 interface Props {
@@ -42,7 +50,7 @@ interface Props {
 }
 
 export default function ExtractionForm({ onStart, loading }: Props) {
-  const [type, setType] = useState('empresas')
+  const [type, setType] = useState('restaurante')
   const [state, setState] = useState('MS')
   const [city, setCity] = useState('')
   const [cities, setCities] = useState<string[]>([])
@@ -68,9 +76,9 @@ export default function ExtractionForm({ onStart, loading }: Props) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!city) return
+    if (!city || !type.trim()) return
     const limit = parseInt(maxResults) || 50
-    onStart(type, city, state, limit)
+    onStart(type.trim(), city, state, limit)
   }
 
   return (
@@ -78,14 +86,22 @@ export default function ExtractionForm({ onStart, loading }: Props) {
       <h2 style={styles.title}>Nova Extração</h2>
       <div style={styles.row}>
 
-        {/* Tipo */}
+        {/* Tipo — texto livre com sugestões */}
         <div style={styles.field}>
-          <label style={styles.label}>TIPO</label>
-          <select value={type} onChange={e => setType(e.target.value)} style={styles.select}>
-            {TIPOS.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
+          <label style={styles.label}>CATEGORIA</label>
+          <input
+            list="tipo-sugestoes"
+            value={type}
+            onChange={e => setType(e.target.value)}
+            placeholder="ex: padaria, farmácia..."
+            required
+            minLength={2}
+            style={styles.input}
+          />
+          <datalist id="tipo-sugestoes">
+            {TIPO_SUGESTOES.map(s => <option key={s} value={s} />)}
+          </datalist>
+          <span style={styles.hint}>Digite ou escolha uma sugestão</span>
         </div>
 
         {/* Estado */}

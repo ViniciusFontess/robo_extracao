@@ -29,6 +29,8 @@ def _save_place(db, extraction_id: str, data: dict) -> bool:
         category=data.get("category"),
         opening_hours=data.get("opening_hours"),
         maps_url=data.get("maps_url"),
+        facebook=data.get("facebook"),
+        instagram=data.get("instagram"),
     )
     db.add(place)
     try:
