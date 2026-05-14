@@ -2,6 +2,7 @@ import os
 import time
 import random
 from datetime import datetime, timezone
+from urllib.parse import quote_plus
 from sqlalchemy.exc import IntegrityError
 from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
 
@@ -87,7 +88,8 @@ def _extract_place_details(page) -> dict:
             "span[aria-label*='avalia']"
         ).first.inner_text(timeout=3000)
         count_str = text.strip().replace("(", "").replace(")", "").replace(".", "").replace(",", "")
-        data["rating_count"] = int(count_str) if count_str.isdigit() else None
+        clean = count_str.rstrip("+")
+        data["rating_count"] = int(clean) if clean.isdigit() else None
     except Exception:
         data["rating_count"] = None
 
@@ -160,7 +162,7 @@ def run_extraction(extraction_id: str) -> None:
             return
 
         query = f"{extraction.type} {extraction.city} {extraction.state}"
-        search_url = "https://www.google.com/maps/search/" + query.replace(" ", "+")
+        search_url = "https://www.google.com/maps/search/" + quote_plus(query)
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
@@ -209,7 +211,7 @@ def run_extraction(extraction_id: str) -> None:
                     for a in links
                     if a.get_attribute("href")
                 ]
-                new_hrefs = [h for h in hrefs if h not in seen_urls]
+                new_hrefs = [h for h in hrefs if h.split("@")[0] not in seen_urls]
 
                 if not new_hrefs:
                     no_new_rounds += 1
@@ -220,7 +222,7 @@ def run_extraction(extraction_id: str) -> None:
 
                 # Visit each new place
                 for href in new_hrefs:
-                    seen_urls.add(href)
+                    seen_urls.add(href.split("@")[0])
                     try:
                         page.goto(href, wait_until="networkidle", timeout=20000)
                         _random_delay(1.5, 3.0)
@@ -228,7 +230,6 @@ def run_extraction(extraction_id: str) -> None:
                         if _is_captcha(page):
                             _update_status(db, extraction_id, "error", "CAPTCHA detectado durante extração")
                             browser.close()
-                            db.close()
                             return
 
                         data = _extract_place_details(page)
@@ -238,21 +239,18 @@ def run_extraction(extraction_id: str) -> None:
                             _increment_found(db, extraction_id)
 
                         # Go back to search results
-                        page.go_back(wait_until="networkidle", timeout=20000)
+                        page.goto(search_url, wait_until="networkidle", timeout=20000)
+                        page.wait_for_selector(feed_selector, timeout=10000)
                         _random_delay(1.0, 2.0)
 
                     except PwTimeout:
                         # Timeout on individual place — skip and continue
-                        try:
-                            page.go_back(wait_until="networkidle", timeout=10000)
-                        except Exception:
-                            page.goto(search_url, wait_until="networkidle", timeout=20000)
+                        page.goto(search_url, wait_until="networkidle", timeout=20000)
+                        page.wait_for_selector(feed_selector, timeout=10000)
                         _random_delay(1.0, 2.0)
                     except Exception:
-                        try:
-                            page.go_back(wait_until="networkidle", timeout=10000)
-                        except Exception:
-                            page.goto(search_url, wait_until="networkidle", timeout=20000)
+                        page.goto(search_url, wait_until="networkidle", timeout=20000)
+                        page.wait_for_selector(feed_selector, timeout=10000)
                         _random_delay(1.0, 2.0)
 
                 # Scroll the feed panel to load more results
