@@ -21,12 +21,13 @@ export default function ExtractionForm({ onStart, loading }: Props) {
   const [type, setType] = useState('empresas')
   const [city, setCity] = useState('')
   const [state, setState] = useState('MS')
-  const [maxResults, setMaxResults] = useState(0)
+  const [maxResults, setMaxResults] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!city.trim()) return
-    onStart(type, city.trim(), state, maxResults)
+    const limit = parseInt(maxResults) || 50
+    onStart(type, city.trim(), state, limit)
   }
 
   return (
@@ -63,13 +64,15 @@ export default function ExtractionForm({ onStart, loading }: Props) {
           <label style={styles.label}>LIMITE</label>
           <input
             type="number"
-            min={0}
+            min={1}
             value={maxResults}
-            onChange={e => setMaxResults(Math.max(0, parseInt(e.target.value) || 0))}
+            onChange={e => setMaxResults(e.target.value)}
+            placeholder="50"
             style={styles.input}
-            title="0 = sem limite"
           />
-          <span style={styles.hint}>{maxResults === 0 ? 'Sem limite' : `Até ${maxResults} resultados`}</span>
+          <span style={styles.hint}>
+            {maxResults === '' ? 'Padrão: 50' : `Até ${maxResults} resultados`}
+          </span>
         </div>
       </div>
       <button type="submit" style={styles.button} disabled={loading}>

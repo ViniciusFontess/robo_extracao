@@ -89,6 +89,19 @@ def list_extractions(db: Session = Depends(get_db)):
     return db.query(Extraction).order_by(Extraction.created_at.desc()).all()
 
 
+@app.delete(
+    "/api/extractions/{extraction_id}",
+    status_code=204,
+    dependencies=[Depends(verify_token)],
+)
+def delete_extraction(extraction_id: str, db: Session = Depends(get_db)):
+    extraction = db.get(Extraction, extraction_id)
+    if not extraction:
+        raise HTTPException(status_code=404, detail="Extração não encontrada")
+    db.delete(extraction)
+    db.commit()
+
+
 @app.get(
     "/api/extractions/{extraction_id}",
     response_model=ExtractionResponse,

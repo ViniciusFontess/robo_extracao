@@ -72,4 +72,7 @@ export const api = {
 
   exportCsv: (id: string) =>
     http.get(`/api/extractions/${id}/export`, { responseType: 'blob' }),
+
+  deleteExtraction: (id: string) =>
+    http.delete(`/api/extractions/${id}`),
 }
