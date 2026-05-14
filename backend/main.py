@@ -22,6 +22,14 @@ from scraper import run_extraction
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # Mark any "running" extractions as error (orphaned from previous server crash/reload)
+    with engine.connect() as conn:
+        conn.execute(text(
+            "UPDATE extractions SET status='error', error_msg='Servidor reiniciado durante extração' "
+            "WHERE status='running'"
+        ))
+        conn.commit()
+
     # Inline migrations — safe to run repeatedly (fail silently if column exists)
     with engine.connect() as conn:
         for stmt in [
