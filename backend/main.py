@@ -30,18 +30,19 @@ async def lifespan(app: FastAPI):
         ))
         conn.commit()
 
-    # Inline migrations — safe to run repeatedly (fail silently if column exists)
-    with engine.connect() as conn:
-        for stmt in [
-            "ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0",
-            "ALTER TABLE places ADD COLUMN facebook VARCHAR(500)",
-            "ALTER TABLE places ADD COLUMN instagram VARCHAR(500)",
-        ]:
-            try:
+    # Inline migrations — each in its own connection so a failed ALTER doesn't
+    # abort the whole transaction and block subsequent statements (PostgreSQL behaviour)
+    for stmt in [
+        "ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0",
+        "ALTER TABLE places ADD COLUMN facebook VARCHAR(500)",
+        "ALTER TABLE places ADD COLUMN instagram VARCHAR(500)",
+    ]:
+        try:
+            with engine.connect() as conn:
                 conn.execute(text(stmt))
                 conn.commit()
-            except Exception:
-                pass
+        except Exception:
+            pass  # column already exists — safe to ignore
     yield
 
 
