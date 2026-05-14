@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import Base, engine, get_db
+from database import Base, engine
 from auth import create_access_token, verify_token
 from schemas import LoginRequest, TokenResponse
 
@@ -32,6 +32,7 @@ def login(body: LoginRequest):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais inválidas",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token({"sub": "admin"})
     return TokenResponse(access_token=token)
@@ -39,4 +40,5 @@ def login(body: LoginRequest):
 
 @app.get("/api/extractions", dependencies=[Depends(verify_token)])
 def list_extractions_stub():
-    return []  # full implementation in Task 5
+    # Full implementation in Task 5 (DB injection added there)
+    return []
