@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from sqlalchemy import text
 from database import Base, engine, get_db
 from auth import create_access_token, verify_token
 from models import Extraction, Place
@@ -21,6 +22,13 @@ from scraper import run_extraction
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # Inline migration: add max_results column if missing (safe to run repeatedly)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
     yield
 
 
@@ -63,6 +71,7 @@ def create_extraction(
         type=body.type,
         city=body.city,
         state=body.state,  # already uppercased by schema validator
+        max_results=body.max_results,
     )
     db.add(extraction)
     db.commit()

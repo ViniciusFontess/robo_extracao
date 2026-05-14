@@ -19,6 +19,7 @@ class ExtractionCreate(BaseModel):
     type: Literal["empresas", "restaurantes", "passeio"]
     city: str
     state: str  # sigla 2 letras, ex: MS
+    max_results: Annotated[int, Field(ge=0)] = 0  # 0 = sem limite
 
     @field_validator("state")
     @classmethod
@@ -37,6 +38,7 @@ class ExtractionResponse(BaseModel):
     state: str
     status: str
     total_found: Annotated[int, Field(ge=0)]
+    max_results: int = 0
     error_msg: Optional[str] = None
     created_at: datetime
     finished_at: Optional[datetime] = None

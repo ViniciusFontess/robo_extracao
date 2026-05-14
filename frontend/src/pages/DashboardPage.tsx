@@ -27,11 +27,11 @@ export default function DashboardPage() {
     queryFn: () => api.listExtractions().then(r => r.data),
   })
 
-  async function handleStart(type: string, city: string, state: string) {
+  async function handleStart(type: string, city: string, state: string, maxResults: number) {
     setStarting(true)
     setStartError('')
     try {
-      const r = await api.createExtraction(type, city, state)
+      const r = await api.createExtraction(type, city, state, maxResults)
       setActiveId(r.data.id)
       refetchList()
     } catch {

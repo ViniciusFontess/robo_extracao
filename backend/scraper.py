@@ -163,6 +163,7 @@ def run_extraction(extraction_id: str) -> None:
 
         query = f"{extraction.type} {extraction.city} {extraction.state}"
         search_url = "https://www.google.com/maps/search/" + quote_plus(query)
+        max_results = extraction.max_results or 0  # 0 = sem limite
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
@@ -222,6 +223,14 @@ def run_extraction(extraction_id: str) -> None:
 
                 # Visit each new place
                 for href in new_hrefs:
+                    # Check limit before visiting next place
+                    if max_results > 0:
+                        extraction = db.get(Extraction, extraction_id)
+                        if extraction and extraction.total_found >= max_results:
+                            browser.close()
+                            _update_status(db, extraction_id, "done")
+                            return
+
                     seen_urls.add(href.split("@")[0])
                     try:
                         page.goto(href, wait_until="networkidle", timeout=20000)

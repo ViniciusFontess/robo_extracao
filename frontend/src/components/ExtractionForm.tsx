@@ -13,7 +13,7 @@ const TIPOS = [
 ]
 
 interface Props {
-  onStart: (type: string, city: string, state: string) => void
+  onStart: (type: string, city: string, state: string, maxResults: number) => void
   loading: boolean
 }
 
@@ -21,11 +21,12 @@ export default function ExtractionForm({ onStart, loading }: Props) {
   const [type, setType] = useState('empresas')
   const [city, setCity] = useState('')
   const [state, setState] = useState('MS')
+  const [maxResults, setMaxResults] = useState(0)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!city.trim()) return
-    onStart(type, city.trim(), state)
+    onStart(type, city.trim(), state, maxResults)
   }
 
   return (
@@ -58,6 +59,18 @@ export default function ExtractionForm({ onStart, loading }: Props) {
             ))}
           </select>
         </div>
+        <div style={styles.field}>
+          <label style={styles.label}>LIMITE</label>
+          <input
+            type="number"
+            min={0}
+            value={maxResults}
+            onChange={e => setMaxResults(Math.max(0, parseInt(e.target.value) || 0))}
+            style={styles.input}
+            title="0 = sem limite"
+          />
+          <span style={styles.hint}>{maxResults === 0 ? 'Sem limite' : `Até ${maxResults} resultados`}</span>
+        </div>
       </div>
       <button type="submit" style={styles.button} disabled={loading}>
         {loading ? '⏳ Iniciando...' : '▶ Iniciar Extração'}
@@ -72,11 +85,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '20px', marginBottom: '20px',
   },
   title: { margin: '0 0 16px', fontSize: '16px', color: '#333' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
   field: { display: 'flex', flexDirection: 'column', gap: '4px' },
   label: { fontSize: '11px', fontWeight: 600, color: '#666', letterSpacing: '0.5px' },
   select: { padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' },
   input: { padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' },
+  hint: { fontSize: '11px', color: '#888', marginTop: '2px' },
   button: {
     width: '100%', padding: '12px', background: '#1a73e8', color: 'white',
     border: 'none', borderRadius: '6px', fontSize: '15px', cursor: 'pointer', fontWeight: 600,

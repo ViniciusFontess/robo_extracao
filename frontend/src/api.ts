@@ -26,6 +26,7 @@ export interface Extraction {
   state: string
   status: string
   total_found: number
+  max_results: number
   error_msg: string | null
   created_at: string
   finished_at: string | null
@@ -55,8 +56,8 @@ export const api = {
   login: (username: string, password: string) =>
     http.post<{ access_token: string }>('/auth/login', { username, password }),
 
-  createExtraction: (type: string, city: string, state: string) =>
-    http.post<Extraction>('/api/extractions', { type, city, state }),
+  createExtraction: (type: string, city: string, state: string, maxResults = 0) =>
+    http.post<Extraction>('/api/extractions', { type, city, state, max_results: maxResults }),
 
   listExtractions: () =>
     http.get<Extraction[]>('/api/extractions'),
