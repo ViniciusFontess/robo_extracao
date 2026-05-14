@@ -58,6 +58,8 @@ class PlaceResponse(BaseModel):
     category: Optional[str] = None
     opening_hours: Optional[str] = None
     maps_url: Optional[str] = None
+    facebook: Optional[str] = None
+    instagram: Optional[str] = None
 
 
 class PlacesPage(BaseModel):

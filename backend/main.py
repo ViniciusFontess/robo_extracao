@@ -22,13 +22,18 @@ from scraper import run_extraction
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
-    # Inline migration: add max_results column if missing (safe to run repeatedly)
+    # Inline migrations — safe to run repeatedly (fail silently if column exists)
     with engine.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0"))
-            conn.commit()
-        except Exception:
-            pass  # column already exists
+        for stmt in [
+            "ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0",
+            "ALTER TABLE places ADD COLUMN facebook VARCHAR(500)",
+            "ALTER TABLE places ADD COLUMN instagram VARCHAR(500)",
+        ]:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                pass
     yield
 
 
@@ -153,12 +158,14 @@ def export_csv(extraction_id: str, db: Session = Depends(get_db)):
     writer = csv.writer(output)
     writer.writerow([
         "nome", "endereço", "telefone", "website",
-        "rating", "nº avaliações", "categoria", "horário", "maps_url",
+        "rating", "nº avaliações", "categoria", "horário",
+        "facebook", "instagram", "maps_url",
     ])
     for p in places:
         writer.writerow([
             p.name, p.address, p.phone, p.website,
-            p.rating, p.rating_count, p.category, p.opening_hours, p.maps_url,
+            p.rating, p.rating_count, p.category, p.opening_hours,
+            p.facebook, p.instagram, p.maps_url,
         ])
     output.seek(0)
     filename = f"extracao_{extraction.type}_{extraction.city}_{extraction.state}.csv"

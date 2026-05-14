@@ -35,6 +35,8 @@ class Place(Base):
     category = Column(String(100))
     opening_hours = Column(Text)
     maps_url = Column(Text)
+    facebook = Column(String(500))
+    instagram = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     extraction = relationship("Extraction", back_populates="places")

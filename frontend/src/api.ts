@@ -43,6 +43,8 @@ export interface Place {
   category: string | null
   opening_hours: string | null
   maps_url: string | null
+  facebook: string | null
+  instagram: string | null
 }
 
 export interface PlacesPage {

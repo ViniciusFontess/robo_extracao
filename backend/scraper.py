@@ -134,6 +134,22 @@ def _extract_place_details(page) -> dict:
     except Exception:
         data["opening_hours"] = None
 
+    # Social media links — scan all links in the main panel
+    data["facebook"] = None
+    data["instagram"] = None
+    try:
+        links = page.locator('div[role="main"] a[href^="http"]').all()
+        for link in links:
+            href = (link.get_attribute("href") or "").split("?")[0].rstrip("/")
+            if not href:
+                continue
+            if "facebook.com" in href and data["facebook"] is None:
+                data["facebook"] = href
+            elif "instagram.com" in href and data["instagram"] is None:
+                data["instagram"] = href
+    except Exception:
+        pass
+
     return data
 
 
