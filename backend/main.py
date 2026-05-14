@@ -110,6 +110,7 @@ def get_places(
     items = (
         db.query(Place)
         .filter(Place.extraction_id == extraction_id)
+        .order_by(Place.created_at.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

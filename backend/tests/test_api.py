@@ -45,7 +45,7 @@ def test_list_extractions(client):
     )
     r = client.get("/api/extractions", headers=headers)
     assert r.status_code == 200
-    assert len(r.json()) >= 1
+    assert len(r.json()) == 1
 
 
 def test_get_extraction_status(client):
@@ -83,3 +83,6 @@ def test_export_csv_empty(client):
     r = client.get(f"/api/extractions/{created['id']}/export", headers=headers)
     assert r.status_code == 200
     assert "text/csv" in r.headers["content-type"]
+    assert r.text.startswith("nome,")
+    lines = r.text.strip().splitlines()
+    assert len(lines) == 1  # header only, no data rows
