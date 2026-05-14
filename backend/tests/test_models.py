@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 from models import Extraction, Place
 
 def test_extraction_defaults(db):
@@ -38,5 +39,5 @@ def test_place_unique_name_address(db):
     db.commit()
     db.add(place2)
 
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         db.commit()
