@@ -29,6 +29,8 @@ def _save_place(db, extraction_id: str, data: dict) -> bool:
         category=data.get("category"),
         opening_hours=data.get("opening_hours"),
         maps_url=data.get("maps_url"),
+        facebook=data.get("facebook"),
+        instagram=data.get("instagram"),
     )
     db.add(place)
     try:
@@ -134,6 +136,22 @@ def _extract_place_details(page) -> dict:
     except Exception:
         data["opening_hours"] = None
 
+    # Social media links — scan all links in the main panel
+    data["facebook"] = None
+    data["instagram"] = None
+    try:
+        links = page.locator('div[role="main"] a[href^="http"]').all()
+        for link in links:
+            href = (link.get_attribute("href") or "").split("?")[0].rstrip("/")
+            if not href:
+                continue
+            if "facebook.com" in href and data["facebook"] is None:
+                data["facebook"] = href
+            elif "instagram.com" in href and data["instagram"] is None:
+                data["instagram"] = href
+    except Exception:
+        pass
+
     return data
 
 
@@ -163,6 +181,7 @@ def run_extraction(extraction_id: str) -> None:
 
         query = f"{extraction.type} {extraction.city} {extraction.state}"
         search_url = "https://www.google.com/maps/search/" + quote_plus(query)
+        max_results = extraction.max_results or 0  # 0 = sem limite
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
@@ -222,6 +241,14 @@ def run_extraction(extraction_id: str) -> None:
 
                 # Visit each new place
                 for href in new_hrefs:
+                    # Check limit before visiting next place
+                    if max_results > 0:
+                        extraction = db.get(Extraction, extraction_id)
+                        if extraction and extraction.total_found >= max_results:
+                            browser.close()
+                            _update_status(db, extraction_id, "done")
+                            return
+
                     seen_urls.add(href.split("@")[0])
                     try:
                         page.goto(href, wait_until="networkidle", timeout=20000)

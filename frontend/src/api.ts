@@ -26,6 +26,7 @@ export interface Extraction {
   state: string
   status: string
   total_found: number
+  max_results: number
   error_msg: string | null
   created_at: string
   finished_at: string | null
@@ -42,6 +43,8 @@ export interface Place {
   category: string | null
   opening_hours: string | null
   maps_url: string | null
+  facebook: string | null
+  instagram: string | null
 }
 
 export interface PlacesPage {
@@ -55,8 +58,8 @@ export const api = {
   login: (username: string, password: string) =>
     http.post<{ access_token: string }>('/auth/login', { username, password }),
 
-  createExtraction: (type: string, city: string, state: string) =>
-    http.post<Extraction>('/api/extractions', { type, city, state }),
+  createExtraction: (type: string, city: string, state: string, maxResults = 0) =>
+    http.post<Extraction>('/api/extractions', { type, city, state, max_results: maxResults }),
 
   listExtractions: () =>
     http.get<Extraction[]>('/api/extractions'),
@@ -71,4 +74,7 @@ export const api = {
 
   exportCsv: (id: string) =>
     http.get(`/api/extractions/${id}/export`, { responseType: 'blob' }),
+
+  deleteExtraction: (id: string) =>
+    http.delete(`/api/extractions/${id}`),
 }

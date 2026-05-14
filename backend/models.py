@@ -13,6 +13,7 @@ class Extraction(Base):
     state = Column(String(2), nullable=False)
     status = Column(String(20), nullable=False, default="pending")  # pending|running|done|error
     total_found = Column(Integer, default=0)
+    max_results = Column(Integer, default=0)  # 0 = sem limite
     error_msg = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     finished_at = Column(DateTime)
@@ -34,6 +35,8 @@ class Place(Base):
     category = Column(String(100))
     opening_hours = Column(Text)
     maps_url = Column(Text)
+    facebook = Column(String(500))
+    instagram = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     extraction = relationship("Extraction", back_populates="places")

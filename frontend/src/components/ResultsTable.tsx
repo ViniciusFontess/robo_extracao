@@ -56,6 +56,8 @@ export default function ResultsTable({ extractionId }: Props) {
               <th style={styles.th}>Rating</th>
               <th style={styles.th}>Categoria</th>
               <th style={styles.th}>Website</th>
+              <th style={styles.th}>Facebook</th>
+              <th style={styles.th}>Instagram</th>
             </tr>
           </thead>
           <tbody>
@@ -71,6 +73,16 @@ export default function ResultsTable({ extractionId }: Props) {
                 <td style={styles.td}>
                   {p.website
                     ? <a href={p.website} target="_blank" rel="noreferrer" style={{ color: '#1a73e8' }}>link</a>
+                    : '—'}
+                </td>
+                <td style={styles.td}>
+                  {p.facebook
+                    ? <a href={p.facebook} target="_blank" rel="noreferrer" style={{ color: '#1877f2' }}>fb</a>
+                    : '—'}
+                </td>
+                <td style={styles.td}>
+                  {p.instagram
+                    ? <a href={p.instagram} target="_blank" rel="noreferrer" style={{ color: '#e1306c' }}>ig</a>
                     : '—'}
                 </td>
               </tr>

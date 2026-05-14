@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from sqlalchemy import text
 from database import Base, engine, get_db
 from auth import create_access_token, verify_token
 from models import Extraction, Place
@@ -21,6 +22,27 @@ from scraper import run_extraction
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # Mark any "running" extractions as error (orphaned from previous server crash/reload)
+    with engine.connect() as conn:
+        conn.execute(text(
+            "UPDATE extractions SET status='error', error_msg='Servidor reiniciado durante extração' "
+            "WHERE status='running'"
+        ))
+        conn.commit()
+
+    # Inline migrations — each in its own connection so a failed ALTER doesn't
+    # abort the whole transaction and block subsequent statements (PostgreSQL behaviour)
+    for stmt in [
+        "ALTER TABLE extractions ADD COLUMN max_results INTEGER DEFAULT 0",
+        "ALTER TABLE places ADD COLUMN facebook VARCHAR(500)",
+        "ALTER TABLE places ADD COLUMN instagram VARCHAR(500)",
+    ]:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(stmt))
+                conn.commit()
+        except Exception:
+            pass  # column already exists — safe to ignore
     yield
 
 
@@ -63,6 +85,7 @@ def create_extraction(
         type=body.type,
         city=body.city,
         state=body.state,  # already uppercased by schema validator
+        max_results=body.max_results,
     )
     db.add(extraction)
     db.commit()
@@ -78,6 +101,19 @@ def create_extraction(
 )
 def list_extractions(db: Session = Depends(get_db)):
     return db.query(Extraction).order_by(Extraction.created_at.desc()).all()
+
+
+@app.delete(
+    "/api/extractions/{extraction_id}",
+    status_code=204,
+    dependencies=[Depends(verify_token)],
+)
+def delete_extraction(extraction_id: str, db: Session = Depends(get_db)):
+    extraction = db.get(Extraction, extraction_id)
+    if not extraction:
+        raise HTTPException(status_code=404, detail="Extração não encontrada")
+    db.delete(extraction)
+    db.commit()
 
 
 @app.get(
@@ -131,12 +167,14 @@ def export_csv(extraction_id: str, db: Session = Depends(get_db)):
     writer = csv.writer(output)
     writer.writerow([
         "nome", "endereço", "telefone", "website",
-        "rating", "nº avaliações", "categoria", "horário", "maps_url",
+        "rating", "nº avaliações", "categoria", "horário",
+        "facebook", "instagram", "maps_url",
     ])
     for p in places:
         writer.writerow([
             p.name, p.address, p.phone, p.website,
-            p.rating, p.rating_count, p.category, p.opening_hours, p.maps_url,
+            p.rating, p.rating_count, p.category, p.opening_hours,
+            p.facebook, p.instagram, p.maps_url,
         ])
     output.seek(0)
     filename = f"extracao_{extraction.type}_{extraction.city}_{extraction.state}.csv"

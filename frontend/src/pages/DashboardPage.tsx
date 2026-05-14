@@ -1,39 +1,28 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api, Extraction } from '../api'
 import ExtractionForm from '../components/ExtractionForm'
-import ExtractionStatus from '../components/ExtractionStatus'
-import ResultsTable from '../components/ResultsTable'
 
 export default function DashboardPage() {
-  const [activeId, setActiveId] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
-  const { data: activeExtraction } = useQuery({
-    queryKey: ['extraction', activeId],
-    queryFn: () => api.getExtraction(activeId!).then(r => r.data),
-    enabled: !!activeId,
-    refetchInterval: query => {
-      const s = query.state.data?.status
-      return s === 'running' || s === 'pending' ? 3000 : false
-    },
-  })
-
-  const { data: extractions, refetch: refetchList } = useQuery({
+  const { data: extractions } = useQuery({
     queryKey: ['extractions'],
     queryFn: () => api.listExtractions().then(r => r.data),
   })
 
-  async function handleStart(type: string, city: string, state: string) {
+  async function handleStart(type: string, city: string, state: string, maxResults: number) {
     setStarting(true)
     setStartError('')
     try {
-      const r = await api.createExtraction(type, city, state)
-      setActiveId(r.data.id)
-      refetchList()
+      const r = await api.createExtraction(type, city, state, maxResults)
+      queryClient.invalidateQueries({ queryKey: ['extractions'] })
+      navigate(`/extractions/${r.data.id}`)
     } catch {
       setStartError('Erro ao iniciar extração. Tente novamente.')
     } finally {
@@ -41,11 +30,16 @@ export default function DashboardPage() {
     }
   }
 
-  const isTerminal = activeExtraction?.status === 'done' || activeExtraction?.status === 'error'
-
-  function handleNewExtraction() {
-    setActiveId(null)
-    setStartError('')
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!window.confirm('Excluir esta extração e todos os dados?')) return
+    setDeletingId(id)
+    try {
+      await api.deleteExtraction(id)
+      queryClient.invalidateQueries({ queryKey: ['extractions'] })
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   function handleLogout() {
@@ -61,40 +55,34 @@ export default function DashboardPage() {
       </div>
 
       <div style={styles.content}>
-        {!activeId ? (
-          <>
-            <ExtractionForm onStart={handleStart} loading={starting} />
-            {startError && <p style={styles.startError}>{startError}</p>}
-          </>
-        ) : (
-          <>
-            {activeExtraction && <ExtractionStatus extraction={activeExtraction} />}
-            {isTerminal && (
-              <button onClick={handleNewExtraction} style={styles.newBtn}>
-                + Nova Extração
-              </button>
-            )}
-            {activeExtraction && activeExtraction.total_found > 0 && (
-              <ResultsTable extractionId={activeExtraction.id} />
-            )}
-          </>
-        )}
+        <ExtractionForm onStart={handleStart} loading={starting} />
+        {startError && <p style={styles.startError}>{startError}</p>}
 
-        {!activeId && extractions && extractions.length > 0 && (
+        {extractions && extractions.length > 0 && (
           <div style={styles.historyCard}>
             <h3 style={styles.historyTitle}>Extrações Anteriores</h3>
             {extractions.map((ex: Extraction) => (
               <div
                 key={ex.id}
                 style={styles.historyRow}
-                onClick={() => setActiveId(ex.id)}
+                onClick={() => navigate(`/extractions/${ex.id}`)}
               >
                 <span style={{ fontWeight: 500 }}>
                   {ex.type} · {ex.city}/{ex.state}
                 </span>
-                <span style={{ fontSize: '12px', color: '#888' }}>
-                  {ex.total_found} registros · {ex.status}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '12px', color: '#888' }}>
+                    {ex.total_found} registros · {ex.status}
+                  </span>
+                  <button
+                    onClick={e => handleDelete(ex.id, e)}
+                    disabled={deletingId === ex.id}
+                    style={styles.deleteRowBtn}
+                    title="Excluir extração"
+                  >
+                    🗑
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -117,11 +105,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   content: { maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' },
   startError: { color: '#d32f2f', fontSize: '13px', margin: '8px 0 0' },
-  newBtn: {
-    padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none',
-    borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: 600,
-    marginTop: '16px',
-  },
   historyCard: {
     background: 'white', border: '1px solid #e0e0e0', borderRadius: '8px',
     padding: '20px', marginTop: '20px',
@@ -131,5 +114,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '10px 12px', borderRadius: '6px', cursor: 'pointer',
     borderBottom: '1px solid #f0f0f0',
+  },
+  deleteRowBtn: {
+    padding: '4px 8px', background: 'transparent', color: '#d32f2f',
+    border: 'none', borderRadius: '4px', fontSize: '14px',
+    cursor: 'pointer', opacity: 0.7,
   },
 }

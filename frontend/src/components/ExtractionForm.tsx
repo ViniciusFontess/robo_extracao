@@ -1,65 +1,154 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 
 const ESTADOS = [
-  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
-  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
-  'RS','RO','RR','SC','SP','SE','TO',
+  { uf: 'AC', nome: 'Acre' },
+  { uf: 'AL', nome: 'Alagoas' },
+  { uf: 'AP', nome: 'Amapá' },
+  { uf: 'AM', nome: 'Amazonas' },
+  { uf: 'BA', nome: 'Bahia' },
+  { uf: 'CE', nome: 'Ceará' },
+  { uf: 'DF', nome: 'Distrito Federal' },
+  { uf: 'ES', nome: 'Espírito Santo' },
+  { uf: 'GO', nome: 'Goiás' },
+  { uf: 'MA', nome: 'Maranhão' },
+  { uf: 'MT', nome: 'Mato Grosso' },
+  { uf: 'MS', nome: 'Mato Grosso do Sul' },
+  { uf: 'MG', nome: 'Minas Gerais' },
+  { uf: 'PA', nome: 'Pará' },
+  { uf: 'PB', nome: 'Paraíba' },
+  { uf: 'PR', nome: 'Paraná' },
+  { uf: 'PE', nome: 'Pernambuco' },
+  { uf: 'PI', nome: 'Piauí' },
+  { uf: 'RJ', nome: 'Rio de Janeiro' },
+  { uf: 'RN', nome: 'Rio Grande do Norte' },
+  { uf: 'RS', nome: 'Rio Grande do Sul' },
+  { uf: 'RO', nome: 'Rondônia' },
+  { uf: 'RR', nome: 'Roraima' },
+  { uf: 'SC', nome: 'Santa Catarina' },
+  { uf: 'SP', nome: 'São Paulo' },
+  { uf: 'SE', nome: 'Sergipe' },
+  { uf: 'TO', nome: 'Tocantins' },
 ]
 
-const TIPOS = [
-  { value: 'empresas', label: '🏢 Empresas' },
-  { value: 'restaurantes', label: '🍽️ Restaurantes' },
-  { value: 'passeio', label: '🎡 Passeio' },
+const TIPO_SUGESTOES = [
+  'restaurante', 'lanchonete', 'padaria', 'pizzaria', 'churrascaria',
+  'farmácia', 'supermercado', 'mercado', 'açougue', 'hortifruti',
+  'academia', 'salão de beleza', 'barbearia', 'clínica', 'dentista',
+  'médico', 'veterinário', 'pet shop',
+  'advogado', 'contabilidade', 'imobiliária',
+  'hotel', 'pousada', 'motel',
+  'posto de combustível', 'oficina mecânica', 'loja de autopeças',
+  'escola', 'faculdade', 'curso',
+  'banco', 'lotérica',
+  'passeio', 'parque', 'museu', 'teatro',
+  'sorveteria', 'confeitaria', 'cafeteria',
 ]
 
 interface Props {
-  onStart: (type: string, city: string, state: string) => void
+  onStart: (type: string, city: string, state: string, maxResults: number) => void
   loading: boolean
 }
 
 export default function ExtractionForm({ onStart, loading }: Props) {
-  const [type, setType] = useState('empresas')
-  const [city, setCity] = useState('')
+  const [type, setType] = useState('restaurante')
   const [state, setState] = useState('MS')
+  const [city, setCity] = useState('')
+  const [cities, setCities] = useState<string[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
+  const [maxResults, setMaxResults] = useState('')
+
+  // Fetch cities from IBGE whenever state changes
+  useEffect(() => {
+    setLoadingCities(true)
+    setCity('')
+    fetch(
+      `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${state}/municipios?orderBy=nome`
+    )
+      .then(r => r.json())
+      .then((data: { nome: string }[]) => {
+        const names = data.map(m => m.nome)
+        setCities(names)
+        setCity(names[0] ?? '')
+      })
+      .catch(() => setCities([]))
+      .finally(() => setLoadingCities(false))
+  }, [state])
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!city.trim()) return
-    onStart(type, city.trim(), state)
+    if (!city || !type.trim()) return
+    const limit = parseInt(maxResults) || 50
+    onStart(type.trim(), city, state, limit)
   }
 
   return (
     <form onSubmit={handleSubmit} style={styles.card}>
       <h2 style={styles.title}>Nova Extração</h2>
       <div style={styles.row}>
+
+        {/* Tipo — texto livre com sugestões */}
         <div style={styles.field}>
-          <label style={styles.label}>TIPO</label>
-          <select value={type} onChange={e => setType(e.target.value)} style={styles.select}>
-            {TIPOS.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </div>
-        <div style={styles.field}>
-          <label style={styles.label}>CIDADE</label>
+          <label style={styles.label}>CATEGORIA</label>
           <input
-            value={city}
-            onChange={e => setCity(e.target.value)}
-            placeholder="Ex: Dourados"
-            style={styles.input}
+            list="tipo-sugestoes"
+            value={type}
+            onChange={e => setType(e.target.value)}
+            placeholder="ex: padaria, farmácia..."
             required
+            minLength={2}
+            style={styles.input}
           />
+          <datalist id="tipo-sugestoes">
+            {TIPO_SUGESTOES.map(s => <option key={s} value={s} />)}
+          </datalist>
+          <span style={styles.hint}>Digite ou escolha uma sugestão</span>
         </div>
+
+        {/* Estado */}
         <div style={styles.field}>
           <label style={styles.label}>ESTADO</label>
           <select value={state} onChange={e => setState(e.target.value)} style={styles.select}>
             {ESTADOS.map(s => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s.uf} value={s.uf}>{s.uf} — {s.nome}</option>
             ))}
           </select>
         </div>
+
+        {/* Cidade — filtered by state via IBGE */}
+        <div style={styles.field}>
+          <label style={styles.label}>CIDADE</label>
+          <select
+            value={city}
+            onChange={e => setCity(e.target.value)}
+            style={styles.select}
+            disabled={loadingCities}
+            required
+          >
+            {loadingCities
+              ? <option>Carregando...</option>
+              : cities.map(c => <option key={c} value={c}>{c}</option>)
+            }
+          </select>
+        </div>
+
+        {/* Limite */}
+        <div style={styles.field}>
+          <label style={styles.label}>LIMITE</label>
+          <input
+            type="number"
+            min={1}
+            value={maxResults}
+            onChange={e => setMaxResults(e.target.value)}
+            placeholder="50"
+            style={styles.input}
+          />
+          <span style={styles.hint}>
+            {maxResults === '' ? 'Padrão: 50' : `Até ${maxResults} resultados`}
+          </span>
+        </div>
+
       </div>
-      <button type="submit" style={styles.button} disabled={loading}>
+      <button type="submit" style={styles.button} disabled={loading || loadingCities || !city}>
         {loading ? '⏳ Iniciando...' : '▶ Iniciar Extração'}
       </button>
     </form>
@@ -72,11 +161,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '20px', marginBottom: '20px',
   },
   title: { margin: '0 0 16px', fontSize: '16px', color: '#333' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
   field: { display: 'flex', flexDirection: 'column', gap: '4px' },
   label: { fontSize: '11px', fontWeight: 600, color: '#666', letterSpacing: '0.5px' },
   select: { padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' },
   input: { padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' },
+  hint: { fontSize: '11px', color: '#888', marginTop: '2px' },
   button: {
     width: '100%', padding: '12px', background: '#1a73e8', color: 'white',
     border: 'none', borderRadius: '6px', fontSize: '15px', cursor: 'pointer', fontWeight: 600,
