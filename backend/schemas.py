@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Literal, Optional, Annotated
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # Auth
@@ -29,6 +29,8 @@ class ExtractionCreate(BaseModel):
 
 
 class ExtractionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     type: str
     city: str
@@ -39,12 +41,11 @@ class ExtractionResponse(BaseModel):
     created_at: datetime
     finished_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
 
 # Place
 class PlaceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: Optional[str] = None
     address: Optional[str] = None
@@ -55,9 +56,6 @@ class PlaceResponse(BaseModel):
     category: Optional[str] = None
     opening_hours: Optional[str] = None
     maps_url: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 class PlacesPage(BaseModel):
