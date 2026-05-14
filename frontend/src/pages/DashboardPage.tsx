@@ -9,6 +9,7 @@ import ResultsTable from '../components/ResultsTable'
 export default function DashboardPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState('')
   const navigate = useNavigate()
 
   const { data: activeExtraction } = useQuery({
@@ -28,13 +29,23 @@ export default function DashboardPage() {
 
   async function handleStart(type: string, city: string, state: string) {
     setStarting(true)
+    setStartError('')
     try {
       const r = await api.createExtraction(type, city, state)
       setActiveId(r.data.id)
       refetchList()
+    } catch {
+      setStartError('Erro ao iniciar extração. Tente novamente.')
     } finally {
       setStarting(false)
     }
+  }
+
+  const isTerminal = activeExtraction?.status === 'done' || activeExtraction?.status === 'error'
+
+  function handleNewExtraction() {
+    setActiveId(null)
+    setStartError('')
   }
 
   function handleLogout() {
@@ -50,16 +61,21 @@ export default function DashboardPage() {
       </div>
 
       <div style={styles.content}>
-        <ExtractionForm onStart={handleStart} loading={starting} />
-
-        {activeExtraction && (
+        {!activeId ? (
           <>
-            <ExtractionStatus extraction={activeExtraction} />
-            {activeExtraction.total_found > 0 && (
-              <ResultsTable
-                extractionId={activeExtraction.id}
-                exportUrl={api.exportUrl(activeExtraction.id)}
-              />
+            <ExtractionForm onStart={handleStart} loading={starting} />
+            {startError && <p style={styles.startError}>{startError}</p>}
+          </>
+        ) : (
+          <>
+            {activeExtraction && <ExtractionStatus extraction={activeExtraction} />}
+            {isTerminal && (
+              <button onClick={handleNewExtraction} style={styles.newBtn}>
+                + Nova Extração
+              </button>
+            )}
+            {activeExtraction && activeExtraction.total_found > 0 && (
+              <ResultsTable extractionId={activeExtraction.id} />
             )}
           </>
         )}
@@ -100,6 +116,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'white', cursor: 'pointer', fontSize: '13px',
   },
   content: { maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' },
+  startError: { color: '#d32f2f', fontSize: '13px', margin: '8px 0 0' },
+  newBtn: {
+    padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none',
+    borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: 600,
+    marginTop: '16px',
+  },
   historyCard: {
     background: 'white', border: '1px solid #e0e0e0', borderRadius: '8px',
     padding: '20px', marginTop: '20px',

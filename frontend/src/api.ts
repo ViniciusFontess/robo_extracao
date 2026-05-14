@@ -69,5 +69,6 @@ export const api = {
       params: { page, page_size: pageSize },
     }),
 
-  exportUrl: (id: string) => `/api/extractions/${id}/export`,
+  exportCsv: (id: string) =>
+    http.get(`/api/extractions/${id}/export`, { responseType: 'blob' }),
 }

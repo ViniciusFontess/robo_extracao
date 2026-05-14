@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { api, Place } from '../api'
+import { api } from '../api'
 
 interface Props {
   extractionId: string
-  exportUrl: string
 }
 
-export default function ResultsTable({ extractionId, exportUrl }: Props) {
+export default function ResultsTable({ extractionId }: Props) {
   const [page, setPage] = useState(1)
+
+  useEffect(() => { setPage(1) }, [extractionId])
 
   const { data } = useQuery({
     queryKey: ['places', extractionId, page],
@@ -30,7 +31,20 @@ export default function ResultsTable({ extractionId, exportUrl }: Props) {
     <div style={styles.card}>
       <div style={styles.header}>
         <h3 style={styles.title}>Resultados ({data.total})</h3>
-        <a href={exportUrl} style={styles.exportBtn}>⬇ Exportar CSV</a>
+        <button
+          onClick={async () => {
+            const r = await api.exportCsv(extractionId)
+            const url = URL.createObjectURL(r.data as Blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `extracao_${extractionId}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+          style={styles.exportBtn}
+        >
+          ⬇ Exportar CSV
+        </button>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={styles.table}>
@@ -45,7 +59,7 @@ export default function ResultsTable({ extractionId, exportUrl }: Props) {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((p: Place, i: number) => (
+            {data.items.map((p, i) => (
               <tr key={p.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
                 <td style={styles.td}>{p.name ?? '—'}</td>
                 <td style={styles.td}>{p.address ?? '—'}</td>
@@ -95,7 +109,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: { margin: 0, fontSize: '16px', color: '#333' },
   exportBtn: {
     background: '#34a853', color: 'white', padding: '6px 14px',
-    borderRadius: '4px', fontSize: '13px', textDecoration: 'none',
+    borderRadius: '4px', fontSize: '13px', border: 'none', cursor: 'pointer',
   },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
   thead: { background: '#f5f5f5' },

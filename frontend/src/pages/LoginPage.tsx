@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 
 export default function LoginPage() {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -13,11 +14,11 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const r = await api.login('admin', password)
+      const r = await api.login(username, password)
       localStorage.setItem('token', r.data.access_token)
       navigate('/')
     } catch {
-      setError('Senha incorreta')
+      setError('Usuário ou senha incorretos')
     } finally {
       setLoading(false)
     }
@@ -28,6 +29,14 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} style={styles.card}>
         <h1 style={styles.title}>Robô de Extração</h1>
         <p style={styles.subtitle}>Google Maps</p>
+        <input
+          type="text"
+          placeholder="Usuário"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          style={styles.input}
+          required
+        />
         <input
           type="password"
           placeholder="Senha"
